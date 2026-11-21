@@ -2,7 +2,7 @@
 /**
  * 学生成绩：导入成绩文件（Excel），按总分自动排序，展示各科成绩
  */
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { api, downloadTemplate } from '../api/index.js';
 import { toast } from '../store/toast.js';
 import AppModal from '../components/AppModal.vue';
@@ -13,6 +13,11 @@ const examName = ref('');
 const grades = ref([]);
 const examNames = ref([]);
 const subjects = ref([]);
+
+const examTypes = ref([]);
+const examTypeVisible = ref(false);
+const examTypeName = ref('');
+const examTypeSaving = ref(false);
 
 const importVisible = ref(false);
 const importFile = ref(null);
@@ -36,6 +41,38 @@ async function load() {
 }
 watch(classId, () => { examName.value = ''; load(); });
 watch(examName, load);
+
+/* ---- 考试类型增删 ---- */
+async function loadExamTypes() {
+  examTypes.value = await api.examTypes();
+}
+onMounted(loadExamTypes);
+
+async function addExamType() {
+  const n = examTypeName.value.trim();
+  if (!n) { toast('请输入考试类型名称', 'error'); return; }
+  examTypeSaving.value = true;
+  try {
+    await api.createExamType(n);
+    examTypeName.value = '';
+    await loadExamTypes();
+    examName.value = n;
+    toast('考试类型已添加', 'success');
+  } catch (err) {
+    toast(err.message || '添加失败', 'error');
+  } finally {
+    examTypeSaving.value = false;
+  }
+}
+
+async function removeExamType(name) {
+  if (!confirm(`确定删除考试类型「${name}」？该名称下的成绩记录将一并删除。`)) return;
+  await api.deleteExamType(name);
+  if (examName.value === name) examName.value = '';
+  await loadExamTypes();
+  if (classId.value) load();
+  toast('考试类型已删除', 'success');
+}
 
 function scoreOf(row, subject) {
   const s = row.subjects.find((x) => x.subject === subject);
@@ -84,10 +121,14 @@ async function doImport() {
             <ClassSelect v-model="classId" />
             <div class="field">
               <label class="field-label">考试名称</label>
-              <select v-model="examName" class="select" style="min-width:160px">
-                <option value="">全部考试</option>
-                <option v-for="n in examNames" :key="n" :value="n">{{ n }}</option>
-              </select>
+              <div class="row" style="gap:6px; flex-wrap:nowrap">
+                <select v-model="examName" class="select" style="min-width:160px">
+                  <option value="">全部考试</option>
+                  <option v-for="n in examNames" :key="n" :value="n">{{ n }}</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" title="新增考试类型" @click="examTypeName = ''; examTypeVisible = true">＋</button>
+                <button class="btn btn-ghost btn-sm" title="管理考试类型" @click="examTypeVisible = true">管理</button>
+              </div>
             </div>
           </div>
           <div class="toolbar-right">
@@ -125,6 +166,22 @@ async function doImport() {
         </table>
       </div>
     </div>
+
+    <AppModal v-model="examTypeVisible" title="管理考试类型" width="520px">
+      <div class="row" style="gap:8px; margin-bottom:14px">
+        <input v-model="examTypeName" class="input" placeholder="考试类型名称，如：期中考试" style="flex:1" @keyup.enter="addExamType" />
+        <button class="btn btn-primary btn-sm" :disabled="examTypeSaving" @click="addExamType">新增</button>
+      </div>
+      <div v-if="examTypes.length === 0" class="empty">暂无考试类型，请在上方新增。</div>
+      <div v-for="t in examTypes" :key="t.id" class="row class-manage-item">
+        <span class="tag tag-blue">{{ t.name }}</span>
+        <span style="flex:1"></span>
+        <button class="btn-link danger" @click="removeExamType(t.name)">删除</button>
+      </div>
+      <template #footer>
+        <button class="btn btn-ghost" @click="examTypeVisible = false">完成</button>
+      </template>
+    </AppModal>
 
     <AppModal v-model="importVisible" title="导入成绩文件" width="560px">
       <div class="field">

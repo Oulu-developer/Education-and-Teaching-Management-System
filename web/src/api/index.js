@@ -66,6 +66,9 @@ export const api = {
   // 成绩
   grades: (classId, examName) => http.get('/grades', { params: { classId, examName } }),
   examNames: (classId) => http.get('/grades/exam-names', { params: { classId } }),
+  examTypes: () => http.get('/grades/exam-types'),
+  createExamType: (name) => http.post('/grades/exam-types', { name }),
+  deleteExamType: (name) => http.delete(`/grades/exam-types/${encodeURIComponent(name)}`),
   importGrades: (data) => http.post('/grades/batch', data),
 
   // 时政热点

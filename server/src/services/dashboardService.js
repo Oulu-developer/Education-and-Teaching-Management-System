@@ -10,7 +10,7 @@ import { QUOTES } from '../config/index.js';
 
 /**
  * 按当天日期从内置格言库稳定地「系统推送」两句（同一天固定，隔天自动轮换）。
- * 返回 [{ content, source }]，source = 'system'。
+ * 返回 [{ content, author, source }]，source = 'system'。
  */
 export function pickDailySystemQuotes() {
   const d = new Date();
@@ -21,8 +21,8 @@ export function pickDailySystemQuotes() {
   const first = QUOTES[i1];
   const second = QUOTES[i2] !== first ? QUOTES[i2] : QUOTES[(i1 + 1) % n];
   return [
-    { content: first, source: 'system' },
-    { content: second, source: 'system' },
+    { content: first.content, author: first.author || '', source: 'system' },
+    { content: second.content, author: second.author || '', source: 'system' },
   ];
 }
 
@@ -141,7 +141,7 @@ export async function summary() {
   // 每日两句格言：系统推送两句；若教师手动添加过格言，则用「系统一句 + 教师一句」
   const sys = pickDailySystemQuotes();
   const teacherQuote = quotes[0] && quotes[0].content !== sys[0].content
-    ? { content: quotes[0].content, source: 'teacher' }
+    ? { content: quotes[0].content, author: '', source: 'teacher' }
     : null;
   const dailyQuotes = teacherQuote ? [sys[0], teacherQuote] : sys;
 

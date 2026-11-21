@@ -90,8 +90,11 @@ function fmtDeadline(str) {
 
 /* ---- 新闻分类配色 ---- */
 const categoryClass = (c) => ({
-  '要闻': 'cat-yaowen', '国际': 'cat-guonei', '学术': 'cat-xueshu', '政治': 'cat-zhengzhi',
+  '要闻': 'cat-yaowen', '国际': 'cat-guonei', '学术': 'cat-xueshu', '政治': 'cat-zhengzhi', '财经': 'cat-caijing',
 }[c] || 'cat-yaowen');
+const categoryEmoji = (c) => ({
+  '要闻': '🔥', '国际': '🌍', '学术': '🤖', '政治': '🏛️', '财经': '📈',
+}[c] || '📰');
 </script>
 
 <template>
@@ -104,18 +107,29 @@ const categoryClass = (c) => ({
       <div class="stat stat-c4"><div class="stat-emoji">📅</div><div class="stat-value">{{ summary.exams.length }}</div><div class="stat-label">考试安排</div></div>
     </div>
 
-    <!-- 每日格言（两句） -->
+    <!-- 每日格言（两句·励志） -->
     <div class="card quote-card mt-18">
       <div class="card-head">
         <div class="card-title">每日格言</div>
         <button class="btn btn-soft btn-sm" @click="quoteVisible = true">＋ 添加格言</button>
       </div>
       <div class="card-body quote-list">
-        <div v-for="(q, i) in summary.quotes" :key="i" class="quote-box" :class="q.source === 'system' ? 'quote-system' : 'quote-teacher'">
-          <span class="quote-tag" :class="q.source === 'system' ? 'tag-system' : 'tag-teacher'">
-            {{ q.source === 'system' ? '系统推送' : '教师添加' }}
-          </span>
-          <span class="quote-text">{{ q.content }}</span>
+        <div
+          v-for="(q, i) in summary.quotes"
+          :key="i"
+          class="quote-box"
+          :class="`quote-theme-${i % 3}`"
+        >
+          <div class="quote-mark">“</div>
+          <div class="quote-body">
+            <div class="quote-text">{{ q.content }}</div>
+            <div class="quote-footer">
+              <span class="quote-tag" :class="q.source === 'system' ? 'tag-system' : 'tag-teacher'">
+                {{ q.source === 'system' ? '系统推送' : '教师添加' }}
+              </span>
+              <span v-if="q.author" class="quote-author">—— {{ q.author }}</span>
+            </div>
+          </div>
         </div>
         <div v-if="summary.quotes.length === 0" class="hint">暂无格言，点击右上角添加。</div>
       </div>
@@ -192,7 +206,7 @@ const categoryClass = (c) => ({
           >
             <div class="news-thumb" :class="{ 'news-thumb-empty': !n.image }">
               <img v-if="n.image" :src="n.image" :alt="n.title" loading="lazy" @error="$event.target.style.display='none'" />
-              <span v-else class="news-thumb-emoji">📰</span>
+              <span v-else class="news-thumb-emoji">{{ categoryEmoji(n.category) }}</span>
             </div>
             <div class="news-card-body">
               <div class="news-card-title">{{ n.title }}</div>

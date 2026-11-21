@@ -100,6 +100,24 @@ export async function getTodayNews() {
   }
 
   const items = collected.slice(0, config.newsMaxItems);
+
+  // 图片兜底：无图新闻从同批「有图新闻」中借用图片（同分类优先，其次全局），保证卡片尽量有图展示
+  const poolByCat = {};
+  const poolAll = [];
+  items.forEach((it) => {
+    if (it.image) {
+      poolAll.push(it.image);
+      (poolByCat[it.category] = poolByCat[it.category] || []).push(it.image);
+    }
+  });
+  if (poolAll.length) {
+    items.forEach((it, idx) => {
+      if (it.image) return;
+      const pool = poolByCat[it.category]?.length ? poolByCat[it.category] : poolAll;
+      it.image = pool[idx % pool.length];
+    });
+  }
+
   if (items.length) {
     await run(from('news').insert(items).select('id'), '缓存新闻失败');
     return items;

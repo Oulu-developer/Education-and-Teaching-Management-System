@@ -30,13 +30,45 @@ export async function listGrades(classId, examName) {
     .sort((a, b) => b.total - a.total);
 }
 
-/** 考试名称列表（供成绩页筛选） */
+/** 考试名称列表（供成绩页筛选）：预定义考试类型 + 该班已有成绩名称，合并去重 */
 export async function listExamNames(classId) {
   const rows = await run(
     from('grade').select('exam_name').eq('class_id', Number(classId)),
     '查询考试失败',
   );
-  return [...new Set((rows || []).map((r) => r.exam_name).filter(Boolean))];
+  const names = new Set((rows || []).map((r) => r.exam_name).filter(Boolean));
+  const types = await run(from('exam_type').select('name'), '查询考试类型失败');
+  (types || []).forEach((t) => { if (t.name) names.add(t.name); });
+  return [...names];
+}
+
+/** 预定义考试类型列表（教师可增删） */
+export async function listExamTypes() {
+  const rows = await run(
+    from('exam_type').select('*').order('id', { ascending: true }),
+    '查询考试类型失败',
+  );
+  return rows || [];
+}
+
+/** 新增考试类型（预定义名称） */
+export async function createExamType(name) {
+  const n = String(name ?? '').trim();
+  if (!n) throw new AppError('考试类型名称不能为空');
+  const data = await run(
+    from('exam_type').insert({ name: n }).select().single(),
+    '新增考试类型失败',
+  );
+  return data;
+}
+
+/** 删除考试类型，并同步清理该名称下的成绩记录 */
+export async function deleteExamType(name) {
+  const n = String(name ?? '').trim();
+  if (!n) throw new AppError('考试类型名称不能为空');
+  await run(from('grade').delete().eq('exam_name', n), '清理关联成绩失败');
+  await run(from('exam_type').delete().eq('name', n).select('id'), '删除考试类型失败');
+  return { name: n };
 }
 
 /** 批量导入成绩：按学生姓名匹配班级学生，覆盖式导入某次考试 */
