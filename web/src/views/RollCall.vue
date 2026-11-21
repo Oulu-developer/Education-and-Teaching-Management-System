@@ -4,8 +4,8 @@
  */
 import { ref, watch } from 'vue';
 import { api } from '../api/index.js';
-import { meta } from '../store/index.js';
 import { toast } from '../store/toast.js';
+import ClassSelect from '../components/ClassSelect.vue';
 
 const classId = ref('');
 const students = ref([]);
@@ -60,13 +60,7 @@ async function awardPoints() {
     <div class="card">
       <div class="card-body">
         <div class="toolbar">
-          <div class="field">
-            <label class="field-label">选择班级</label>
-            <select v-model="classId" class="select" style="min-width:200px">
-              <option value="">请选择班级</option>
-              <option v-for="c in meta.classes" :key="c.id" :value="c.id">{{ c.name }}{{ c.grade ? '（' + c.grade + '）' : '' }}</option>
-            </select>
-          </div>
+          <ClassSelect v-model="classId" />
           <div class="hint" style="align-self:center">共 {{ students.length }} 名学生（来自学生信息）</div>
         </div>
       </div>

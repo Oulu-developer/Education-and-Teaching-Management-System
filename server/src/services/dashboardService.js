@@ -4,8 +4,27 @@
 import { from, run } from '../config/db.js';
 import { AppError } from '../utils/response.js';
 import { daysUntil, todayStr } from '../utils/helpers.js';
+import { QUOTES } from '../config/index.js';
 
 /* ---------------- 每日格言 ---------------- */
+
+/**
+ * 按当天日期从内置格言库稳定地「系统推送」两句（同一天固定，隔天自动轮换）。
+ * 返回 [{ content, source }]，source = 'system'。
+ */
+export function pickDailySystemQuotes() {
+  const d = new Date();
+  const dayIndex = Math.floor(d.getTime() / 86400000);
+  const n = QUOTES.length;
+  const i1 = ((dayIndex % n) + n) % n;
+  const i2 = ((dayIndex + Math.floor(n / 2)) % n + n) % n;
+  const first = QUOTES[i1];
+  const second = QUOTES[i2] !== first ? QUOTES[i2] : QUOTES[(i1 + 1) % n];
+  return [
+    { content: first, source: 'system' },
+    { content: second, source: 'system' },
+  ];
+}
 
 export async function listQuotes() {
   return run(
@@ -119,8 +138,16 @@ export async function summary() {
   }));
   const unfinished = todoList.filter((t) => !t.done);
 
+  // 每日两句格言：系统推送两句；若教师手动添加过格言，则用「系统一句 + 教师一句」
+  const sys = pickDailySystemQuotes();
+  const teacherQuote = quotes[0] && quotes[0].content !== sys[0].content
+    ? { content: quotes[0].content, source: 'teacher' }
+    : null;
+  const dailyQuotes = teacherQuote ? [sys[0], teacherQuote] : sys;
+
   return {
-    quote: quotes[0]?.content || '',
+    quotes: dailyQuotes,
+    quote: dailyQuotes[0]?.content || '',
     todos: todoList,
     unfinishedCount: unfinished.length,
     exams,

@@ -7,6 +7,7 @@ import { api } from '../api/index.js';
 import { meta } from '../store/index.js';
 import { createWorkBuddyCloud } from '@tencent-ai/workbuddy-cloud-sdk';
 import { toast } from '../store/toast.js';
+import ClassSelect from '../components/ClassSelect.vue';
 
 const classId = ref('');
 const cells = ref({});
@@ -175,13 +176,7 @@ async function onFileChange(e) {
       <div class="card-body">
         <div class="toolbar">
           <div class="toolbar-left">
-            <div class="field">
-              <label class="field-label">选择班级</label>
-              <select v-model="classId" class="select" style="min-width:200px">
-                <option value="">请选择班级</option>
-                <option v-for="c in meta.classes" :key="c.id" :value="c.id">{{ c.name }}{{ c.grade ? '（' + c.grade + '）' : '' }}</option>
-              </select>
-            </div>
+            <ClassSelect v-model="classId" />
           </div>
           <div class="toolbar-right">
             <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="onFileChange" />

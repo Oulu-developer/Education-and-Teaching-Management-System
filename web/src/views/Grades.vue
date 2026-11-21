@@ -2,11 +2,11 @@
 /**
  * 学生成绩：导入成绩文件（Excel），按总分自动排序，展示各科成绩
  */
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { api, downloadTemplate } from '../api/index.js';
-import { meta } from '../store/index.js';
 import { toast } from '../store/toast.js';
 import AppModal from '../components/AppModal.vue';
+import ClassSelect from '../components/ClassSelect.vue';
 
 const classId = ref('');
 const examName = ref('');
@@ -81,13 +81,7 @@ async function doImport() {
       <div class="card-body">
         <div class="toolbar">
           <div class="toolbar-left">
-            <div class="field">
-              <label class="field-label">选择班级</label>
-              <select v-model="classId" class="select" style="min-width:200px">
-                <option value="">请选择班级</option>
-                <option v-for="c in meta.classes" :key="c.id" :value="c.id">{{ c.name }}{{ c.grade ? '（' + c.grade + '）' : '' }}</option>
-              </select>
-            </div>
+            <ClassSelect v-model="classId" />
             <div class="field">
               <label class="field-label">考试名称</label>
               <select v-model="examName" class="select" style="min-width:160px">

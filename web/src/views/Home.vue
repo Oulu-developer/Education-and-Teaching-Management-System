@@ -1,12 +1,12 @@
 <script setup>
 /**
- * 首页概览：每日格言、今日待办（未完成提醒）、时政热点、考试倒计时、班级总人数
+ * 首页概览：每日格言（两句）、今日待办、考试动态倒计时、多类新闻（带图）、班级总人数
  */
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { api } from '../api/index.js';
 import AppModal from '../components/AppModal.vue';
 
-const summary = ref({ todos: [], exams: [], unfinishedCount: 0, totalStudents: 0, classCount: 0, quote: '' });
+const summary = ref({ quotes: [], todos: [], exams: [], unfinishedCount: 0, totalStudents: 0, classCount: 0, quote: '' });
 const news = ref([]);
 
 const quoteInput = ref('');
@@ -23,7 +23,29 @@ async function load() {
 }
 onMounted(load);
 
-/* 格言 */
+/* ---- 动态倒计时：每秒刷新 ---- */
+const nowTick = ref(Date.now());
+let timer = null;
+onMounted(() => { timer = setInterval(() => { nowTick.value = Date.now(); }, 1000); });
+onUnmounted(() => { if (timer) clearInterval(timer); });
+
+function countdown(dateStr) {
+  const target = new Date(`${String(dateStr || '').slice(0, 10)}T00:00:00`).getTime();
+  if (Number.isNaN(target)) return null;
+  const diff = target - nowTick.value;
+  const totalSec = Math.floor(diff / 1000);
+  return {
+    days: Math.max(0, Math.floor(totalSec / 86400)),
+    hours: Math.max(0, Math.floor((totalSec % 86400) / 3600)),
+    minutes: Math.max(0, Math.floor((totalSec % 3600) / 60)),
+    seconds: Math.max(0, totalSec % 60),
+    diff,
+  };
+}
+const pad = (n) => String(n).padStart(2, '0');
+function fmtExamDate(str) { return String(str || '').slice(0, 10); }
+
+/* ---- 格言 ---- */
 async function addQuote() {
   if (!quoteInput.value.trim()) return;
   await api.createQuote({ content: quoteInput.value });
@@ -32,7 +54,7 @@ async function addQuote() {
   load();
 }
 
-/* 待办 */
+/* ---- 待办 ---- */
 async function addTodo() {
   if (!todoForm.value.content.trim() || !todoForm.value.deadline) return;
   await api.createTodo(todoForm.value);
@@ -49,7 +71,7 @@ async function removeTodo(id) {
   load();
 }
 
-/* 考试 */
+/* ---- 考试 ---- */
 async function addExam() {
   if (!examForm.value.name || !examForm.value.exam_date) return;
   await api.createExam(examForm.value);
@@ -62,36 +84,40 @@ async function removeExam(id) {
   load();
 }
 
-function daysText(d) {
-  if (d === null || d === undefined) return '—';
-  if (d > 0) return `${d} 天`;
-  if (d === 0) return '今天';
-  return `已过 ${-d} 天`;
-}
 function fmtDeadline(str) {
   return String(str || '').replace('T', ' ').slice(0, 16);
 }
+
+/* ---- 新闻分类配色 ---- */
+const categoryClass = (c) => ({
+  '要闻': 'cat-yaowen', '国际': 'cat-guonei', '学术': 'cat-xueshu', '政治': 'cat-zhengzhi',
+}[c] || 'cat-yaowen');
 </script>
 
 <template>
   <div>
-    <!-- 统计块 -->
+    <!-- 统计块（彩色渐变） -->
     <div class="stat-grid">
-      <div class="stat"><div class="stat-value">{{ summary.classCount }}</div><div class="stat-label">班级数量</div></div>
-      <div class="stat"><div class="stat-value">{{ summary.totalStudents }}</div><div class="stat-label">班级总人数</div></div>
-      <div class="stat"><div class="stat-value" :style="{ color: summary.unfinishedCount ? '#d97706' : '' }">{{ summary.unfinishedCount }}</div><div class="stat-label">未完成待办</div></div>
-      <div class="stat"><div class="stat-value">{{ summary.exams.length }}</div><div class="stat-label">考试安排</div></div>
+      <div class="stat stat-c1"><div class="stat-emoji">🏫</div><div class="stat-value">{{ summary.classCount }}</div><div class="stat-label">班级数量</div></div>
+      <div class="stat stat-c2"><div class="stat-emoji">🧑‍🎓</div><div class="stat-value">{{ summary.totalStudents }}</div><div class="stat-label">班级总人数</div></div>
+      <div class="stat stat-c3"><div class="stat-emoji">📝</div><div class="stat-value">{{ summary.unfinishedCount }}</div><div class="stat-label">未完成待办</div></div>
+      <div class="stat stat-c4"><div class="stat-emoji">📅</div><div class="stat-value">{{ summary.exams.length }}</div><div class="stat-label">考试安排</div></div>
     </div>
 
-    <!-- 每日格言 -->
-    <div class="card mt-18">
+    <!-- 每日格言（两句） -->
+    <div class="card quote-card mt-18">
       <div class="card-head">
         <div class="card-title">每日格言</div>
         <button class="btn btn-soft btn-sm" @click="quoteVisible = true">＋ 添加格言</button>
       </div>
-      <div class="card-body">
-        <div v-if="summary.quote" class="quote-box">{{ summary.quote }}</div>
-        <div v-else class="hint">暂无格言，点击右上角添加。</div>
+      <div class="card-body quote-list">
+        <div v-for="(q, i) in summary.quotes" :key="i" class="quote-box" :class="q.source === 'system' ? 'quote-system' : 'quote-teacher'">
+          <span class="quote-tag" :class="q.source === 'system' ? 'tag-system' : 'tag-teacher'">
+            {{ q.source === 'system' ? '系统推送' : '教师添加' }}
+          </span>
+          <span class="quote-text">{{ q.content }}</span>
+        </div>
+        <div v-if="summary.quotes.length === 0" class="hint">暂无格言，点击右上角添加。</div>
       </div>
     </div>
 
@@ -117,7 +143,7 @@ function fmtDeadline(str) {
         </div>
       </div>
 
-      <!-- 考试倒计时 -->
+      <!-- 考试动态倒计时 -->
       <div class="card" style="margin-bottom:0">
         <div class="card-head">
           <div class="card-title">考试倒计时</div>
@@ -125,33 +151,58 @@ function fmtDeadline(str) {
         </div>
         <div class="card-body">
           <div v-if="summary.exams.length === 0" class="hint">暂无考试安排。</div>
-          <div v-for="e in summary.exams" :key="e.id" class="todo-item">
-            <div class="todo-content">
-              <div>{{ e.name }}</div>
-              <div class="hint">{{ e.exam_date }}</div>
+          <div v-for="e in summary.exams" :key="e.id" class="countdown-item">
+            <div class="countdown-info">
+              <div class="countdown-name">{{ e.name }}</div>
+              <div class="hint">{{ fmtExamDate(e.exam_date) }}</div>
             </div>
-            <span class="tag" :class="e.daysLeft > 0 ? 'tag-blue' : 'tag-red'">{{ daysText(e.daysLeft) }}</span>
+            <div class="countdown-clock">
+              <template v-if="countdown(e.exam_date)?.diff > 0">
+                <div class="clock-block"><span class="clock-num">{{ countdown(e.exam_date).days }}</span><span class="clock-unit">天</span></div>
+                <span class="clock-colon">:</span>
+                <div class="clock-block"><span class="clock-num">{{ pad(countdown(e.exam_date).hours) }}</span><span class="clock-unit">时</span></div>
+                <span class="clock-colon">:</span>
+                <div class="clock-block"><span class="clock-num">{{ pad(countdown(e.exam_date).minutes) }}</span><span class="clock-unit">分</span></div>
+                <span class="clock-colon">:</span>
+                <div class="clock-block"><span class="clock-num clock-sec">{{ pad(countdown(e.exam_date).seconds) }}</span><span class="clock-unit">秒</span></div>
+              </template>
+              <span v-else class="tag tag-red">{{ countdown(e.exam_date)?.diff === 0 ? '就是今天' : '已结束' }}</span>
+            </div>
             <button class="btn-link danger" @click="removeExam(e.id)">删除</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 时政热点 -->
+    <!-- 新闻热点（多类带图） -->
     <div class="card mt-18">
       <div class="card-head">
-        <div class="card-title">今日时政热点</div>
-        <span class="hint">每日 6 点更新</span>
+        <div class="card-title">今日新闻热点</div>
+        <span class="hint">国内 · 国际 · 学术 · 政治</span>
       </div>
       <div class="card-body">
         <div v-if="news.length === 0" class="hint">今日暂无热点更新。</div>
-        <div v-for="(n, i) in news" :key="n.id" class="news-item">
-          <div class="news-index">{{ i + 1 }}</div>
-          <div>
-            <a v-if="n.url" :href="n.url" target="_blank" class="news-title">{{ n.title }}</a>
-            <div v-else class="news-title">{{ n.title }}</div>
-            <div class="news-source">{{ n.source }}</div>
-          </div>
+        <div class="news-grid">
+          <a
+            v-for="n in news"
+            :key="n.id"
+            class="news-card"
+            :href="n.url || undefined"
+            :target="n.url ? '_blank' : undefined"
+          >
+            <div class="news-thumb" :class="{ 'news-thumb-empty': !n.image }">
+              <img v-if="n.image" :src="n.image" :alt="n.title" loading="lazy" @error="$event.target.style.display='none'" />
+              <span v-else class="news-thumb-emoji">📰</span>
+            </div>
+            <div class="news-card-body">
+              <div class="news-card-title">{{ n.title }}</div>
+              <div v-if="n.summary" class="news-card-summary">{{ n.summary }}</div>
+              <div class="news-card-meta">
+                <span class="cat-chip" :class="categoryClass(n.category)">{{ n.category }}</span>
+                <span class="news-source">{{ n.source }}</span>
+              </div>
+            </div>
+          </a>
         </div>
       </div>
     </div>
