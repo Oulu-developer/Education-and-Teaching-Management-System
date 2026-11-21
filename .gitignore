@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+
+# 构建产物（由 npm run build 重新生成到 server/public）
+server/public/
+
+# 环境变量（可本地覆盖云服务配置）
+.env
+.env.*
+
+# 日志
+*.log
+npm-debug.log*
+
+# 系统 / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
