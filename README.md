@@ -22,6 +22,11 @@
 - **OCR**：云服务免密钥视觉大模型（前端直接调用，识别课表图片）
 - **时政热点**：人民网/新华网免费 RSS（`fast-xml-parser` 解析，懒加载缓存）
 
+## 功能截图
+<img width="300" height="500" alt="4236ac4c265b84958e50d3c656450ad1" src="https://github.com/user-attachments/assets/a29b39db-4592-4858-a111-69f0212d6029" /><img width="300" height="500" alt="4de8ae1b25acb3d071fa09bf676133cb" src="https://github.com/user-attachments/assets/747926fa-f44d-4277-8eba-db20dba6ec82" /><img width="300" height="500" alt="938c8915ec9f1e86a4763819be3e9964" src="https://github.com/user-attachments/assets/e22c04a1-58b1-4cf7-b47f-8c128121ba22" /><img width="300" height="500" alt="2a00922d5beb321ded45c5955385a3e8" src="https://github.com/user-attachments/assets/c8277d24-5932-4349-a17c-a96bf216d36c" /><img width="300" height="500" alt="5d0f36271f5e70e61da36a2b12b74f38" src="https://github.com/user-attachments/assets/185d051b-1544-4db6-9957-e00daebf57bf" />
+
+
+
 ## 目录结构
 
 ```
